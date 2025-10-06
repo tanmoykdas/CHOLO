@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'login_screen.dart';
+import 'registration_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   @override
@@ -22,6 +24,12 @@ class HomeScreen extends StatelessWidget {
                 color: Colors.black,  // Black color for the text
               ),
             ),
+            const SizedBox(height: 8),
+            // Welcome Text
+            const Text(
+              'Welcome to CHOLO!',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            ),
             SizedBox(height: 30),
             // Brief Description of the App
             Padding(
@@ -37,8 +45,7 @@ class HomeScreen extends StatelessWidget {
             // Login and Registration buttons with a more realistic design
             ElevatedButton(
               onPressed: () {
-                // Navigate to Login Screen
-                print('Login Pressed');
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => LoginScreen()));
               },
               style: ElevatedButton.styleFrom(
                 foregroundColor: Colors.white, backgroundColor: Colors.blueAccent,  // Text color
@@ -57,8 +64,7 @@ class HomeScreen extends StatelessWidget {
             SizedBox(height: 15),
             ElevatedButton(
               onPressed: () {
-                // Navigate to Registration Screen
-                print('Registration Pressed');
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => RegistrationScreen()));
               },
               style: ElevatedButton.styleFrom(
                 foregroundColor: Colors.white, backgroundColor: Colors.greenAccent,  // Text color

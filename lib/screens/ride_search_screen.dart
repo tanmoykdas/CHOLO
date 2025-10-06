@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cholo/services/ride_service.dart';
+import 'package:cholo/widgets/ride_card.dart';
+
+final RideService _rideService = RideService();
 
 class RideSearchScreen extends StatefulWidget {
   @override
@@ -8,26 +12,18 @@ class RideSearchScreen extends StatefulWidget {
 class _RideSearchScreenState extends State<RideSearchScreen> {
   final _routeController = TextEditingController();
   final _timeController = TextEditingController();
+  bool _loading = false;
+  List availableRides = [];
 
-  // Dummy list of available rides (to be replaced by actual data from Firebase or database)
-  List<Map<String, String>> availableRides = [
-    {'vehicleType': 'Car', 'route': 'A to B', 'time': '10:00 AM', 'price': '100'},
-    {'vehicleType': 'Bike', 'route': 'C to D', 'time': '11:00 AM', 'price': '50'},
-    {'vehicleType': 'Car', 'route': 'B to A', 'time': '12:00 PM', 'price': '120'},
-  ];
-
-  // Function to search for rides
-  void _searchRides() {
-    final route = _routeController.text;
-    final time = _timeController.text;
-
-    // Filter available rides based on the entered route and time (simplified logic)
+  Future<void> _searchRides() async {
+    setState(() => _loading = true);
+    final results = await _rideService.searchRides(
+      _routeController.text,
+      _timeController.text,
+    );
     setState(() {
-      availableRides = availableRides.where((ride) {
-        final routeMatch = ride['route']!.contains(route);
-        final timeMatch = ride['time']!.contains(time);
-        return routeMatch && timeMatch;
-      }).toList();
+      availableRides = results;
+      _loading = false;
     });
   }
 
@@ -36,85 +32,77 @@ class _RideSearchScreenState extends State<RideSearchScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Search Rides'),
-        backgroundColor: Colors.black,  // Customize the app bar color
+        backgroundColor: Colors.black,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              // App Name in the Ride Search Screen
-              Text(
-                'CHOLO',
-                style: TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-              SizedBox(height: 30),
-              // Route Field
-              TextField(
-                controller: _routeController,
-                decoration: InputDecoration(
-                  labelText: 'Route (e.g., A to B)',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.map),
-                ),
-              ),
-              SizedBox(height: 20),
-              // Time Field
-              TextField(
-                controller: _timeController,
-                decoration: InputDecoration(
-                  labelText: 'Time (e.g., 10:00 AM)',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.access_time),
-                ),
-              ),
-              SizedBox(height: 20),
-              // Search Button
-              ElevatedButton(
-                onPressed: _searchRides,
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white, backgroundColor: Colors.blueAccent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30.0),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Text(
+                  'CHOLO',
+                  style: TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
                   ),
-                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                  shadowColor: Colors.black.withOpacity(0.3),
-                  elevation: 8,
                 ),
-                child: Text(
-                  'Search',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                SizedBox(height: 30),
+                TextField(
+                  controller: _routeController,
+                  decoration: InputDecoration(
+                    labelText: 'Route (e.g., A to B)',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.map),
+                  ),
                 ),
-              ),
-              SizedBox(height: 30),
-              // Display Available Rides
-              availableRides.isEmpty
-                  ? Text('No rides found', style: TextStyle(fontSize: 18, color: Colors.grey))
-                  : ListView.builder(
-                shrinkWrap: true,
-                itemCount: availableRides.length,
-                itemBuilder: (context, index) {
-                  final ride = availableRides[index];
-                  return Card(
-                    margin: EdgeInsets.symmetric(vertical: 10),
-                    elevation: 4,
-                    child: ListTile(
-                      title: Text('${ride['vehicleType']} - ${ride['route']}'),
-                      subtitle: Text('Time: ${ride['time']} - Price: ${ride['price']}'),
-                      onTap: () {
-                        // Navigate to ride details or booking screen
-                        print('Ride selected: ${ride['route']}');
-                      },
+                SizedBox(height: 20),
+                TextField(
+                  controller: _timeController,
+                  decoration: InputDecoration(
+                    labelText: 'Time (e.g., 10:00 AM)',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.access_time),
+                  ),
+                ),
+                SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _searchRides,
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.white, backgroundColor: Colors.blueAccent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30.0),
                     ),
-                  );
-                },
-              ),
-            ],
+                    padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                    shadowColor: Colors.black.withOpacity(0.3),
+                    elevation: 8,
+                  ),
+                  child: Text(
+                    'Search',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                SizedBox(height: 30),
+                if (_loading) const CircularProgressIndicator(),
+                if (!_loading)
+                  availableRides.isEmpty
+                      ? Text('No rides found', style: TextStyle(fontSize: 18, color: Colors.grey))
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          itemCount: availableRides.length,
+                          itemBuilder: (context, index) {
+                            final ride = availableRides[index];
+                            return RideCard(
+                              ride: ride,
+                              onTap: () {},
+                            );
+                          },
+                        ),
+              ],
+            ),
           ),
         ),
       ),

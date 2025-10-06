@@ -1,90 +1,63 @@
-import 'package:flutter/material.dart';
-import 'package:cholo/models/booking_model.dart';  // Import the Booking model
-import 'package:cholo/models/ride_model.dart';  // Import the Ride model
+import 'package:cholo/models/booking_model.dart';
+import 'package:cholo/models/ride_model.dart';
 
+/// In-memory booking service. Replace with persistent storage later.
 class BookingService {
-  // Dummy list of booked rides (simulating a database)
-  List<Booking> _bookings = [];
+  final List<Booking> _bookings = [];
+  final Map<String, Ride> _ridesById = {}; // track rides for seat restoration
 
-  // Function to book a ride
-  Future<String> bookRide(
-      String riderId,
-      Ride ride,  // Ride being booked
-      int seatsBooked) async {
+  Future<String> bookRide(String riderId, Ride ride, int seatsBooked) async {
     try {
-      // Check if the ride has enough available seats
-      if (seatsBooked > ride.availableSeats) {
-        return "Not enough seats available";
-      }
-
-      // Calculate the total price for the booking
-      double totalPrice = seatsBooked * ride.pricePerSeat;
-
-      // Create a new booking object
-      final newBooking = Booking(
-        id: DateTime.now().toString(),  // Unique ID using current timestamp
+      if (seatsBooked <= 0) return 'Invalid seat count';
+      if (seatsBooked > ride.availableSeats) return 'Not enough seats available';
+      final total = seatsBooked * ride.pricePerSeat;
+      final booking = Booking(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
         riderId: riderId,
         rideId: ride.id,
         seatsBooked: seatsBooked,
-        totalPrice: totalPrice,
-        bookingTime: DateTime.now().toString(),
-        isConfirmed: false,  // Default to unconfirmed
-        isActive: true,  // Default to active
+        totalPrice: total,
+        bookingTime: DateTime.now().toIso8601String(),
+        isConfirmed: false,
+        isActive: true,
       );
-
-      // Simulating saving the booking (adding to the list)
-      _bookings.add(newBooking);
-
-      // Decrease available seats in the ride
+      _bookings.add(booking);
+      _ridesById[ride.id] = ride;
       ride.availableSeats -= seatsBooked;
-
-      // In a real app, save the booking to Firebase or a database
-      return "Booking successful. Total price: \$${totalPrice.toStringAsFixed(2)}";
+      return 'Booking successful. Total price: \$${total.toStringAsFixed(2)}';
     } catch (e) {
-      return "Error booking ride: $e";
+      return 'Error booking ride: $e';
     }
   }
 
-  // Function to get all bookings for a rider
-  List<Booking> getBookingsByRider(String riderId) {
-    // Filter bookings by rider ID
-    return _bookings.where((booking) => booking.riderId == riderId).toList();
-  }
+  List<Booking> getBookingsByRider(String riderId) =>
+      _bookings.where((b) => b.riderId == riderId).toList(growable: false);
 
-  // Function to get all bookings (for testing purposes)
-  List<Booking> getAllBookings() {
-    return _bookings;
-  }
+  List<Booking> getAllBookings() => List.unmodifiable(_bookings);
 
-  // Function to cancel a booking
   Future<String> cancelBooking(String bookingId) async {
     try {
-      // Find the booking by ID
-      final bookingIndex = _bookings.indexWhere((booking) => booking.id == bookingId);
-
-      if (bookingIndex == -1) {
-        return "Booking not found";
-      }
-
-      // Mark the booking as canceled
-      _bookings[bookingIndex].isActive = false;
-
-      // Get the associated ride to add back the available seats
-      final booking = _bookings[bookingIndex];
-      final ride = _getRideById(booking.rideId);
+      final idx = _bookings.indexWhere((b) => b.id == bookingId);
+      if (idx == -1) return 'Booking not found';
+      final existing = _bookings[idx];
+      if (!existing.isActive) return 'Booking already canceled';
+      _bookings[idx] = Booking(
+        id: existing.id,
+        riderId: existing.riderId,
+        rideId: existing.rideId,
+        seatsBooked: existing.seatsBooked,
+        totalPrice: existing.totalPrice,
+        bookingTime: existing.bookingTime,
+        isConfirmed: existing.isConfirmed,
+        isActive: false,
+      );
+      final ride = _ridesById[existing.rideId];
       if (ride != null) {
-        ride.availableSeats += booking.seatsBooked;
+        ride.availableSeats += existing.seatsBooked;
       }
-
-      return "Booking canceled successfully";
+      return 'Booking canceled successfully';
     } catch (e) {
-      return "Error canceling booking: $e";
+      return 'Error canceling booking: $e';
     }
-  }
-
-  // Dummy function to get ride by ID (replace with Firebase or database query)
-  Ride? _getRideById(String rideId) {
-    // In a real app, fetch ride data from Firebase or your database
-    return Ride(id: rideId, driverId: "", vehicleType: "", route: "", availableSeats: 0, pricePerSeat: 0, time: "");
   }
 }

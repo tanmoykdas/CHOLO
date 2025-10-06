@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
-import 'screens/home_screen.dart';  // Make sure home_screen.dart exists in lib/screens/
+import 'screens/home_screen.dart';
+import 'screens/login_screen.dart';
+import 'screens/registration_screen.dart';
+import 'screens/ride_offering_screen.dart';
+import 'screens/ride_search_screen.dart';
+import 'screens/profile_screen.dart';
 
 void main() {
   runApp(MyApp());
@@ -11,10 +16,17 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'CHOLO',
       theme: ThemeData(
-        primarySwatch: Colors.blue,  // Customize theme as needed
-        visualDensity: VisualDensity.adaptivePlatformDensity,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
+        useMaterial3: true,
       ),
-      home: HomeScreen(),  // Load HomeScreen as the starting screen
+      home: HomeScreen(),
+      routes: {
+        '/login': (_) => LoginScreen(),
+        '/register': (_) => RegistrationScreen(),
+        '/offer': (_) => RideOfferingScreen(),
+        '/search': (_) => RideSearchScreen(),
+        '/profile': (_) => ProfileScreen(),
+      },
     );
   }
 }

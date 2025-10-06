@@ -1,20 +1,23 @@
-/// Simple authentication stub service. Replace with real backend integration.
+/// Simple in-memory authentication stub (no backend).
 class AuthService {
-  Future<String?> login(String email, String password) async {
-    if (email == "test@example.com" && password == "password123") {
-      return "Login Successful";
+  // For demo: single hard-coded credential.
+  static const _demoEmail = 'test@example.com';
+  static const _demoPassword = 'password123';
+
+  Future<String> login(String email, String password) async {
+    if (email == _demoEmail && password == _demoPassword) {
+      return 'Login Successful';
     }
-    return "Invalid email or password";
+    return 'Invalid email or password';
   }
 
-  Future<String?> register(String email, String password, String name) async {
+  Future<String> register(String email, String password, String name) async {
     if (email.isNotEmpty && password.isNotEmpty && name.isNotEmpty) {
-      return "Registration Successful";
+      // Accept any non-empty input (no persistence).
+      return 'Registration Successful';
     }
-    return "Please fill in all fields";
+    return 'Please fill in all fields';
   }
 
-  Future<String?> signOut() async {
-    return "Logged out successfully";
-  }
+  Future<String> signOut() async => 'Logged out successfully';
 }

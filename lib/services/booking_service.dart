@@ -1,10 +1,10 @@
 import 'package:cholo/models/booking_model.dart';
 import 'package:cholo/models/ride_model.dart';
 
-/// In-memory booking service. Replace with persistent storage later.
+/// In-memory booking service (no backend).
 class BookingService {
   final List<Booking> _bookings = [];
-  final Map<String, Ride> _ridesById = {}; // track rides for seat restoration
+  final Map<String, Ride> _ridesById = {};
 
   Future<String> bookRide(String riderId, Ride ride, int seatsBooked) async {
     try {

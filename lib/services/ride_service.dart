@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
-import 'package:cholo/models/ride_model.dart'; // Import your Ride model
+import 'package:cholo/models/ride_model.dart';
 
-/// In-memory ride service. Replace with backend integration later.
+/// In-memory ride service (no Firebase).
 class RideService {
   final List<Ride> _rides = [];
 
@@ -36,17 +35,13 @@ class RideService {
   }
 
   Future<List<Ride>> searchRides(String route, String time) async {
-    try {
-      final r = route.trim().toLowerCase();
-      final t = time.trim().toLowerCase();
-      return _rides.where((ride) {
-        final routeMatch = r.isEmpty || ride.route.toLowerCase().contains(r);
-        final timeMatch = t.isEmpty || ride.time.toLowerCase().contains(t);
-        return ride.isActive && routeMatch && timeMatch;
-      }).toList();
-    } catch (_) {
-      return [];
-    }
+    final r = route.trim().toLowerCase();
+    final t = time.trim().toLowerCase();
+    return _rides.where((ride) {
+      final routeMatch = r.isEmpty || ride.route.toLowerCase().contains(r);
+      final timeMatch = t.isEmpty || ride.time.toLowerCase().contains(t);
+      return ride.isActive && routeMatch && timeMatch;
+    }).toList();
   }
 
   List<Ride> getAllRides() => List.unmodifiable(_rides);

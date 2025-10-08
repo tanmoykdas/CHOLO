@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "418728202157",
+    "project_id": "cholo-c9f90",
+    "storage_bucket": "cholo-c9f90.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:418728202157:android:5398e46a23d74ee6b89b24",
+        "android_client_info": {
+          "package_name": "com.cholo.cholo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyChOjj-SXIZMK6fVVAFJfPjcfUoTniJUjI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

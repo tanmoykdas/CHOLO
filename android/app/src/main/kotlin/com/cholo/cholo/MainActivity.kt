@@ -1,4 +1,4 @@
-package com.example.cholo
+package com.cholo.cholo
 
 import io.flutter.embedding.android.FlutterActivity
 

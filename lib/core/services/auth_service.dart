@@ -31,13 +31,11 @@ class AuthService {
         print('[AuthService] Attempt register but Firebase not initialized yet');
       }
       final cred = await _auth.createUserWithEmailAndPassword(email: email, password: password);
-      await cred.user!.sendEmailVerification();
       final user = CholoUser(
         id: cred.user!.uid,
         name: name,
         email: email,
         universityEmail: universityEmail,
-        emailVerified: cred.user!.emailVerified,
         isAdmin: false,
       );
       await _db.doc(user.id).set(user.toMap());
@@ -59,18 +57,7 @@ class AuthService {
     final doc = await _db.doc(cred.user!.uid).get();
     if (!doc.exists) return null;
     final current = CholoUser.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>);
-    if (cred.user!.emailVerified && !current.emailVerified) {
-      await _db.doc(current.id).update({'emailVerified': true});
-      return current.copyWith(emailVerified: true);
-    }
     return current;
-  }
-
-  Future<void> sendVerification() async {
-    final user = _auth.currentUser;
-    if (user != null && !user.emailVerified) {
-      await user.sendEmailVerification();
-    }
   }
 
   Future<void> logout() async => _auth.signOut();

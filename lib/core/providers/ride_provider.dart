@@ -13,10 +13,14 @@ class RideProvider with ChangeNotifier {
   Future<void> search(String route) async {
     _loading = true;
     notifyListeners();
-    _service.ridesForRoute(route).listen((list) {
+    try {
+      final list = await _service.searchByRoute(route);
       _results = list;
+    } catch (_) {
+      _results = [];
+    } finally {
       _loading = false;
       notifyListeners();
-    });
+    }
   }
 }

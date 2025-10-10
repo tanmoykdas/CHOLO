@@ -62,5 +62,4 @@ class AuthProvider with ChangeNotifier {
     await _service.logout();
   }
 
-  Future<void> resendVerification() => _service.sendVerification();
 }

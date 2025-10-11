@@ -25,8 +25,8 @@ class RideService {
 
   Stream<List<Ride>> ridesForRoute(String route) {
     final parts = route.split(' to ');
-    final src = parts.isNotEmpty ? parts.first.trim() : '';
-    final dst = parts.length > 1 ? parts.last.trim() : '';
+    final src = parts.isNotEmpty ? parts.first.trim().toLowerCase() : '';
+    final dst = parts.length > 1 ? parts.last.trim().toLowerCase() : '';
     final key = Ride.buildRouteKey(src, dst);
     return _rides.where('routeKey', isEqualTo: key).snapshots().map((snap) =>
         snap.docs.map((d) => Ride.fromFirestore(d as DocumentSnapshot<Map<String, dynamic>>)).toList());
@@ -39,7 +39,7 @@ class RideService {
     final key = Ride.buildRouteKey(src, dst);
 
     final List<Ride> combined = [];
-    // Run lookups and merge results, ignoring failures
+    // Run lookups (including a broad fetch-and-filter) and merge results, ignoring failures
     await Future.wait([
       () async {
         try {
@@ -60,49 +60,52 @@ class RideService {
           combined.addAll(snap.docs.map((d) => Ride.fromFirestore(d as DocumentSnapshot<Map<String, dynamic>>)));
         } catch (_) {}
       }(),
+      () async {
+        try {
+          final snap = await _rides.limit(200).get();
+          for (final d in snap.docs) {
+            try {
+              final data = d.data() as Map<String, dynamic>;
+              String srcF = (data['source'] ?? '').toString().trim().toLowerCase();
+              String dstF = (data['destination'] ?? '').toString().trim().toLowerCase();
+              if (srcF.isEmpty || dstF.isEmpty) {
+                final route = (data['route'] ?? '').toString();
+                final idx = route.indexOf(' to ');
+                if (idx != -1) {
+                  srcF = route.substring(0, idx).trim().toLowerCase();
+                  dstF = route.substring(idx + 4).trim().toLowerCase();
+                }
+              }
+              final itemKey = Ride.buildRouteKey(srcF, dstF);
+              if (itemKey == key) {
+                combined.add(Ride.fromFirestore(d as DocumentSnapshot<Map<String, dynamic>>));
+              }
+            } catch (_) {}
+          }
+        } catch (_) {}
+      }(),
     ]);
-
-    // De-duplicate by id
+    // De-duplicate by id and filter out past rides
+    final now = DateTime.now();
+    final startOfToday = DateTime(now.year, now.month, now.day);
     final seen = <String>{};
     final unique = <Ride>[];
     for (final r in combined) {
       if (!seen.contains(r.id)) {
-        seen.add(r.id);
-        unique.add(r);
+        // Only include rides that are today or in the future
+        if (r.rideTime.isAfter(startOfToday) || 
+            (r.rideTime.year == now.year && 
+             r.rideTime.month == now.month && 
+             r.rideTime.day == now.day)) {
+          seen.add(r.id);
+          unique.add(r);
+        }
       }
     }
-    if (unique.isNotEmpty) return unique;
-
-    // Final fallback: fetch a limited batch and filter client-side by normalized key
-    try {
-      final snap = await _rides.limit(200).get();
-      final filtered = <Ride>[];
-      for (final d in snap.docs) {
-        try {
-          final data = d.data() as Map<String, dynamic>;
-          String srcF = (data['source'] ?? '').toString();
-          String dstF = (data['destination'] ?? '').toString();
-          if (srcF.isEmpty || dstF.isEmpty) {
-            final route = (data['route'] ?? '').toString();
-            final idx = route.indexOf(' to ');
-            if (idx != -1) {
-              srcF = route.substring(0, idx);
-              dstF = route.substring(idx + 4);
-            }
-          }
-          final itemKey = Ride.buildRouteKey(srcF, dstF);
-          if (itemKey == key) {
-            filtered.add(Ride.fromFirestore(d as DocumentSnapshot<Map<String, dynamic>>));
-          }
-        } catch (_) {}
-      }
-      return filtered;
-    } catch (_) {
-      return unique; // still empty
-    }
-  }
-
-  Future<Ride?> getRide(String id) async {
+    // Sort by ride time (earliest first)
+    unique.sort((a, b) => a.rideTime.compareTo(b.rideTime));
+    return unique;
+  }  Future<Ride?> getRide(String id) async {
     final doc = await _rides.doc(id).get();
     if (!doc.exists) return null;
     return Ride.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>);

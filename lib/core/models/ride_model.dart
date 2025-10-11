@@ -102,6 +102,8 @@ class Booking {
   final String userId;
   final int seats;
   final DateTime createdAt;
+  final bool isCompleted;
+  final bool ratingGiven;
 
   Booking({
     required this.id,
@@ -109,6 +111,8 @@ class Booking {
     required this.userId,
     required this.seats,
     required this.createdAt,
+    this.isCompleted = false,
+    this.ratingGiven = false,
   });
 
   factory Booking.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -119,6 +123,8 @@ class Booking {
       userId: data['userId'],
       seats: data['seats'],
       createdAt: (data['createdAt'] as Timestamp).toDate(),
+      isCompleted: data['isCompleted'] ?? false,
+      ratingGiven: data['ratingGiven'] ?? false,
     );
   }
 
@@ -127,5 +133,7 @@ class Booking {
         'userId': userId,
         'seats': seats,
         'createdAt': Timestamp.fromDate(createdAt),
+        'isCompleted': isCompleted,
+        'ratingGiven': ratingGiven,
       };
 }

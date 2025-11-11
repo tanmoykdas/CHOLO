@@ -12,6 +12,7 @@ import 'core/models/user_model.dart';
 import 'core/services/ride_service.dart';
 import 'core/services/rating_service.dart';
 import 'core/models/rating_model.dart';
+import 'core/widgets/location_input_widget.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -1070,8 +1071,8 @@ class OfferRideScreen extends StatefulWidget {
 class _OfferRideScreenState extends State<OfferRideScreen> {
   final _form = GlobalKey<FormState>();
   String _vehicle = 'car';
-  String _source = '';
-  String _destination = '';
+  LocationData? _sourceLocation;
+  LocationData? _destinationLocation;
   int _seats = 1;
   int _price = 0;
   TimeOfDay _time = const TimeOfDay(hour: 10, minute: 0);
@@ -1110,38 +1111,26 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
               
               const SizedBox(height: 20),
               
-              // From (Starting Point)
-              TextFormField(
-                decoration: InputDecoration(
-                  labelText: 'From',
-                  hintText: 'Enter starting point',
-                  prefixIcon: const Icon(Icons.location_on),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey.shade900,
-                ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                onSaved: (v) => _source = v!.trim(),
+              // From (Starting Point) - Location Picker
+              LocationInputWidget(
+                label: 'From',
+                hintText: 'Enter starting point or select from map',
+                prefixIcon: Icons.location_on,
+                onLocationSelected: (location) {
+                  setState(() => _sourceLocation = location);
+                },
               ),
               
               const SizedBox(height: 20),
               
-              // To (Destination)
-              TextFormField(
-                decoration: InputDecoration(
-                  labelText: 'To',
-                  hintText: 'Enter destination',
-                  prefixIcon: const Icon(Icons.flag),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey.shade900,
-                ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                onSaved: (v) => _destination = v!.trim(),
+              // To (Destination) - Location Picker
+              LocationInputWidget(
+                label: 'To',
+                hintText: 'Enter destination or select from map',
+                prefixIcon: Icons.flag,
+                onLocationSelected: (location) {
+                  setState(() => _destinationLocation = location);
+                },
               ),
               
               const SizedBox(height: 20),
@@ -1237,8 +1226,23 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
                       : () async {
                         if (!(_form.currentState?.validate() ?? false)) return;
                         _form.currentState!.save();
+                        
+                        // Validate location selections
+                        if (_sourceLocation == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please select starting location')),
+                          );
+                          return;
+                        }
+                        if (_destinationLocation == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please select destination')),
+                          );
+                          return;
+                        }
+                        
                         // Prevent sharing if source and destination are the same
-                        if (_source.trim().toLowerCase() == _destination.trim().toLowerCase()) {
+                        if (_sourceLocation!.address.toLowerCase() == _destinationLocation!.address.toLowerCase()) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Starting point and destination cannot be the same'),
@@ -1252,16 +1256,16 @@ class _OfferRideScreenState extends State<OfferRideScreen> {
                           final rideDate = DateTime(now.year, now.month, now.day, _time.hour, _time.minute);
                           final ownerId = auth!.id;
                           final ownerName = auth.name;
-                          final route = '$_source to $_destination';
+                          final route = '${_sourceLocation!.address} to ${_destinationLocation!.address}';
                           final ride = Ride(
                             id: 'temp',
                             ownerId: ownerId,
                             ownerName: ownerName,
                             vehicleType: _vehicle == 'car' ? VehicleType.car : VehicleType.bike,
                             route: route,
-                            source: _source,
-                            destination: _destination,
-                            routeKey: Ride.buildRouteKey(_source, _destination),
+                            source: _sourceLocation!.address,
+                            destination: _destinationLocation!.address,
+                            routeKey: Ride.buildRouteKey(_sourceLocation!.address, _destinationLocation!.address),
                             availableSeats: _seats,
                             pricePerSeat: _price,
                             rideTime: rideDate,
@@ -1322,8 +1326,8 @@ class SearchRideScreen extends StatefulWidget {
 }
 
 class _SearchRideScreenState extends State<SearchRideScreen> {
-  final _srcCtrl = TextEditingController();
-  final _dstCtrl = TextEditingController();
+  LocationData? _sourceLocation;
+  LocationData? _destinationLocation;
   bool _hasSearched = false;
   
   @override
@@ -1338,36 +1342,26 @@ class _SearchRideScreenState extends State<SearchRideScreen> {
           children: [
             const SizedBox(height: 8),
             
-            // From Field
-            TextField(
-              controller: _srcCtrl,
-              decoration: InputDecoration(
-                labelText: 'From',
-                hintText: 'Enter starting point',
-                prefixIcon: const Icon(Icons.location_on),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: Colors.grey.shade900,
-              ),
+            // From Field - Location Picker
+            LocationInputWidget(
+              label: 'From',
+              hintText: 'Enter starting point or select from map',
+              prefixIcon: Icons.location_on,
+              onLocationSelected: (location) {
+                setState(() => _sourceLocation = location);
+              },
             ),
             
             const SizedBox(height: 20),
             
-            // To Field
-            TextField(
-              controller: _dstCtrl,
-              decoration: InputDecoration(
-                labelText: 'To',
-                hintText: 'Enter destination',
-                prefixIcon: const Icon(Icons.flag),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: Colors.grey.shade900,
-              ),
+            // To Field - Location Picker
+            LocationInputWidget(
+              label: 'To',
+              hintText: 'Enter destination or select from map',
+              prefixIcon: Icons.flag,
+              onLocationSelected: (location) {
+                setState(() => _destinationLocation = location);
+              },
             ),
             
             const SizedBox(height: 24),
@@ -1378,22 +1372,20 @@ class _SearchRideScreenState extends State<SearchRideScreen> {
               height: 56,
               child: ElevatedButton(
                 onPressed: () {
-                  final src = _srcCtrl.text.trim();
-                  final dst = _dstCtrl.text.trim();
-                  if (src.isEmpty || dst.isEmpty) {
+                  if (_sourceLocation == null || _destinationLocation == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please enter both From and To locations')),
+                      const SnackBar(content: Text('Please select both From and To locations')),
                     );
                     return;
                   }
-                  if (src.toLowerCase() == dst.toLowerCase()) {
+                  if (_sourceLocation!.address.toLowerCase() == _destinationLocation!.address.toLowerCase()) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('From and To locations cannot be the same')),
                     );
                     return;
                   }
                   setState(() => _hasSearched = true);
-                  final route = '$src to $dst';
+                  final route = '${_sourceLocation!.address} to ${_destinationLocation!.address}';
                   context.read<RideProvider>().search(route);
                 },
                 style: ElevatedButton.styleFrom(
@@ -1585,7 +1577,7 @@ class _SearchRideScreenState extends State<SearchRideScreen> {
                                         final ok = await RideService().bookRide(rideId: r.id, userId: auth.id, seats: seats);
                                         if (ok && context.mounted) {
                                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booked successfully')));
-                                          final route = '${_srcCtrl.text.trim()} to ${_dstCtrl.text.trim()}';
+                                          final route = '${_sourceLocation!.address} to ${_destinationLocation!.address}';
                                           // Refresh search to update remaining seats
                                           // ignore: use_build_context_synchronously
                                           context.read<RideProvider>().search(route);

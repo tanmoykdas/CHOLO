@@ -22,20 +22,22 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> register({
     required String name,
-    required String email,
-    required String password,
+    required String personalEmail,
     required String universityEmail,
+    required String password,
   }) async {
     _loading = true;
     _error = null;
     notifyListeners();
     try {
-      _user = await _service.register(
+      await _service.register(
         name: name,
-        email: email,
-        password: password,
+        personalEmail: personalEmail,
         universityEmail: universityEmail,
+        password: password,
       );
+      // Don't set _user - user must verify email and login
+      _user = null;
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -60,6 +62,10 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> logout() async {
     await _service.logout();
+  }
+  
+  Future<void> resendVerificationEmail(String email, String password) async {
+    await _service.resendVerificationEmail(email, password);
   }
 
 }

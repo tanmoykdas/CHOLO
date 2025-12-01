@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 /// Model to hold location data
 class LocationData {
@@ -93,10 +94,19 @@ class _LocationInputWidgetState extends State<LocationInputWidget> {
 
       if (placemarks.isNotEmpty) {
         final place = placemarks.first;
-        final address =
-            '${place.street}, ${place.locality}, ${place.administrativeArea}';
+        
+        // Build detailed address
+        List<String> addressParts = [];
+        if (place.name != null && place.name!.isNotEmpty) addressParts.add(place.name!);
+        if (place.street != null && place.street!.isNotEmpty && place.street != place.name) addressParts.add(place.street!);
+        if (place.subLocality != null && place.subLocality!.isNotEmpty) addressParts.add(place.subLocality!);
+        if (place.locality != null && place.locality!.isNotEmpty) addressParts.add(place.locality!);
+        if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty && 
+            (place.locality == null || place.locality!.isEmpty)) addressParts.add(place.administrativeArea!);
+        
+        final address = addressParts.toSet().join(', ');
         final location = LocationData(
-          address: address,
+          address: address.isNotEmpty ? address : 'Current Location',
           latitude: position.latitude,
           longitude: position.longitude,
         );
@@ -179,13 +189,26 @@ class _LocationInputWidgetState extends State<LocationInputWidget> {
                 ),
               ],
             ),
+            filled: true,
+            fillColor: Colors.grey.shade900,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            filled: true,
-            fillColor: Colors.grey.shade900,
           ),
-          readOnly: true,
+          onChanged: (value) {
+            // Update location when user types (minimum 1 character)
+            if (value.trim().isNotEmpty) {
+              // Create a location from text input
+              setState(() {
+                _selectedLocation = LocationData(
+                  address: value.trim(),
+                  latitude: 0, // Will be updated when map is used
+                  longitude: 0,
+                );
+              });
+              widget.onLocationSelected(_selectedLocation!);
+            }
+          },
           validator: (v) =>
               (v == null || v.trim().isEmpty) ? 'Location required' : null,
         ),
@@ -218,34 +241,24 @@ class MapPickerScreen extends StatefulWidget {
 }
 
 class _MapPickerScreenState extends State<MapPickerScreen> {
-  late GoogleMapController _mapController;
-  LatLng _selectedPosition = const LatLng(23.8103, 90.4125); // Default: Dhaka
+  late MapController _mapController;
+  LatLng _selectedPosition = LatLng(23.8103, 90.4125); // Default: Dhaka
   String _selectedAddress = '';
   bool _isLoadingAddress = false;
-  Set<Marker> _markers = {};
 
   @override
   void initState() {
     super.initState();
+    _mapController = MapController();
     if (widget.initialLocation != null) {
       _selectedPosition = LatLng(
         widget.initialLocation!.latitude,
         widget.initialLocation!.longitude,
       );
       _selectedAddress = widget.initialLocation!.address;
+    } else {
+      _getAddressFromCoordinates(_selectedPosition);
     }
-    _updateMarker();
-  }
-
-  /// Update marker position on map
-  void _updateMarker() {
-    _markers = {
-      Marker(
-        markerId: const MarkerId('selected'),
-        position: _selectedPosition,
-        infoWindow: InfoWindow(title: _selectedAddress),
-      ),
-    };
   }
 
   /// Get address from coordinates using reverse geocoding
@@ -259,9 +272,47 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
 
       if (placemarks.isNotEmpty) {
         final place = placemarks.first;
-        final address =
-            '${place.street}, ${place.locality}, ${place.administrativeArea}';
-        setState(() => _selectedAddress = address);
+        
+        // Build a detailed, readable address
+        List<String> addressParts = [];
+        
+        // Add street/name if available
+        if (place.name != null && place.name!.isNotEmpty) {
+          addressParts.add(place.name!);
+        }
+        
+        // Add street if different from name
+        if (place.street != null && place.street!.isNotEmpty && place.street != place.name) {
+          addressParts.add(place.street!);
+        }
+        
+        // Add sublocality (neighborhood)
+        if (place.subLocality != null && place.subLocality!.isNotEmpty) {
+          addressParts.add(place.subLocality!);
+        }
+        
+        // Add locality (city/town)
+        if (place.locality != null && place.locality!.isNotEmpty) {
+          addressParts.add(place.locality!);
+        }
+        
+        // Add administrative area (state/division) if locality is not available
+        if (place.administrativeArea != null && 
+            place.administrativeArea!.isNotEmpty &&
+            (place.locality == null || place.locality!.isEmpty)) {
+          addressParts.add(place.administrativeArea!);
+        }
+        
+        // Add postal code if available
+        if (place.postalCode != null && place.postalCode!.isNotEmpty) {
+          addressParts.add(place.postalCode!);
+        }
+        
+        // Build final address, removing duplicates
+        final address = addressParts.toSet().join(', ');
+        setState(() => _selectedAddress = address.isNotEmpty ? address : 'Unknown Location');
+      } else {
+        setState(() => _selectedAddress = 'Location at ${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}');
       }
     } catch (e) {
       if (mounted) {
@@ -275,10 +326,9 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
   }
 
   /// Handle map tap to select location
-  void _onMapTap(LatLng position) {
+  void _onMapTap(TapPosition tapPosition, LatLng position) {
     setState(() {
       _selectedPosition = position;
-      _updateMarker();
     });
     _getAddressFromCoordinates(position);
   }
@@ -302,26 +352,37 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
       ),
       body: Stack(
         children: [
-          GoogleMap(
-            onMapCreated: (controller) => _mapController = controller,
-            initialCameraPosition: CameraPosition(
-              target: _selectedPosition,
-              zoom: 15,
-            ),
-            markers: _markers,
-            onTap: _onMapTap,
-            myLocationButtonEnabled: true,
-            myLocationEnabled: true,
-          ),
-          // Center marker
-          Center(
-            child: Pointer(
-              child: Icon(
-                Icons.location_on,
-                size: 40,
-                color: Colors.red[700],
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: _selectedPosition,
+              initialZoom: 15.0,
+              onTap: _onMapTap,
+              interactionOptions: const InteractionOptions(
+                flags: InteractiveFlag.all,
               ),
             ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.cholo.cholo',
+                maxZoom: 19,
+              ),
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: _selectedPosition,
+                    width: 40,
+                    height: 40,
+                    child: Icon(
+                      Icons.location_on,
+                      size: 40,
+                      color: Colors.red[700],
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
           // Bottom sheet with address and confirm button
           Positioned(
@@ -452,54 +513,4 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
       ),
     );
   }
-}
-
-/// Pointer widget to show center marker
-class Pointer extends StatelessWidget {
-  final Widget child;
-
-  const Pointer({Key? key, required this.child}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Transform.translate(
-            offset: const Offset(0, -12),
-            child: child,
-          ),
-          CustomPaint(
-            painter: PointerPainter(),
-            size: const Size(30, 30),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Custom painter for pointer indicator
-class PointerPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.red
-      ..style = PaintingStyle.fill;
-
-    // Draw circle at top
-    canvas.drawCircle(Offset(size.width / 2, size.height / 2), 6, paint);
-
-    // Draw triangle pointing down
-    final path = Path();
-    path.moveTo(size.width / 2 - 8, size.height / 2);
-    path.lineTo(size.width / 2 + 8, size.height / 2);
-    path.lineTo(size.width / 2, size.height);
-    path.close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(PointerPainter oldDelegate) => false;
 }

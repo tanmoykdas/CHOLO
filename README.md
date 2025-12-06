@@ -73,7 +73,7 @@ CHOLO is a mobile application that enables university students to share rides an
 ### Dependencies
 ```yaml
 flutter:
-  sdk: flutter
+sdk: flutter
 firebase_core: ^2.24.2
 firebase_auth: ^4.15.3
 cloud_firestore: ^4.13.6

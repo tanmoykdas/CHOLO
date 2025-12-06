@@ -1,134 +1,307 @@
-# CHOLO – University Ride Sharing (Bangladesh)
+# CHOLO – University Ride Sharing Platform
 
-CHOLO is a Flutter-based ride-sharing platform tailored for university students in Bangladesh. Students can offer or find daily rides (bike/car) along common campus commute routes after verifying their academic email addresses.
+> A ride-sharing application for university students in Bangladesh
 
-## Current Status
-Scaffold implemented: authentication provider, ride & booking models, placeholder UI screens (landing, login, register, home, offer, search, profile), local notifications service, and initial unit/widget tests. Firebase initialization & data persistence are stubbed; you must add real Firebase configuration (see below).
-
-## Core Features (Phase 1)
-1. University Email Registration & Login (verification flow via Firebase Auth email verification) – logic scaffolded.
-2. Offer Ride: form captures vehicle, route, seats, price, time (currently placeholder publish logic).
-3. Search Ride: real-time query placeholder (route-based) using Firestore stream wiring in `RideService` (needs Firebase config).
-4. Booking: transactional seat decrement logic implemented in `RideService.bookRide`.
-5. Local Notifications: via `flutter_local_notifications` (will expand to FCM later).
-6. User Profile: displays account info & logout.
-7. Admin Panel: deferred (future phase).
-
-## Planned Enhancements (Roadmap)
-- Live map tracking & route suggestions (Google Maps / Mapbox)
-- In-app driver–rider chat (Firestore real-time or dedicated WebSocket)
-- Ratings & reviews; trust & safety module
-- Multi-university domain whitelist management via remote config / Firestore collection
-- Push notifications (FCM) replacing local-only notifications
-- Ride cancellation flow & refund policy (business rules)
-- Analytics & abuse reporting
-
-## Tech Stack
-- Flutter 3 (Dart SDK 3.x)
-- State Management: Provider
-- Backend (Phase 1): Firebase Auth + Cloud Firestore
-- Notifications: flutter_local_notifications (later FCM)
-
-## Project Structure (key folders)
-```
-lib/
-	core/
-		models/        # Data models (User, Ride, Booking)
-		services/      # Firebase + notification abstractions
-		providers/     # State management (Auth, Ride search)
-	main.dart        # App entry & route table
-test/              # Unit & widget tests
-```
-
-## Setup Instructions
-1. Install Flutter & Dart (ensure `flutter doctor` passes).
-2. Enable Firebase for the project:
-	 - Create a Firebase project named e.g. `cholo`.
-	 - Add Android app (use your package ID from `android/app/src/main/AndroidManifest.xml`). Download `google-services.json` into `android/app/`.
-	 - Add iOS app; download `GoogleService-Info.plist` into `ios/Runner/`.
-	 - (Optional) Add web, macOS, Windows if targeting those platforms.
-3. Run `dart pub global activate flutterfire_cli` then:
-	 ```bash
-	 flutterfire configure
-	 ```
-	 This generates `firebase_options.dart`; import it in `main.dart` and replace the `Firebase.initializeApp()` TODO with:
-	 ```dart
-	 await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-	 ```
-4. Install dependencies:
-	 ```bash
-	 flutter pub get
-	 ```
-5. Run the app:
-	 ```bash
-	 flutter run
-	 ```
-
-## Firestore Data Model (Suggested)
-```
-users/{uid}:
-	name, email, universityEmail, emailVerified, isAdmin
-rides/{rideId}:
-	ownerId, vehicleType, route, availableSeats, pricePerSeat, rideTime (Timestamp), bookedSeats
-bookings/{bookingId}:
-	rideId, userId, seats, createdAt
-```
-
-Indexes you may need (composite) later for advanced queries (not yet required):
-- rides: route + rideTime
-
-## Security Rules (High-Level Draft)
-You must enforce that users can only modify their own user doc & their own rides.
-```
-rules_version = '2';
-service cloud.firestore {
-	match /databases/{database}/documents {
-		function isAuth() { return request.auth != null; }
-		function isOwner(pathUserId) { return isAuth() && request.auth.uid == pathUserId; }
-
-		match /users/{userId} {
-			allow read: if isAuth();
-			allow create: if isAuth() && request.auth.uid == userId;
-			allow update, delete: if isOwner(userId);
-		}
-
-		match /rides/{rideId} {
-			allow read: if true; // public listing
-			allow create: if isAuth();
-			allow update, delete: if isAuth() && resource.data.ownerId == request.auth.uid;
-		}
-
-		match /bookings/{bookingId} {
-			allow read: if isAuth();
-			allow create: if isAuth();
-			allow delete: if isAuth() && resource.data.userId == request.auth.uid;
-		}
-	}
-}
-```
-Adjust with stricter seat validation using Cloud Functions (future).
-
-## Testing
-Run all tests:
-```
-flutter test
-```
-Add more tests for:
-- AuthService (mock FirebaseAuth & Firestore using mocktail)
-- RideService transactional booking
-- Widget golden tests for key screens
-
-## Contribution Guidelines
-Use feature branches, submit PR with:
-- Description
-- Screenshots (UI changes)
-- Test coverage summary
-
-## License
-Private / Internal (add explicit license text when ready).
-
-## Contact
-Product Owner / Maintainer: (add name & email)
+Software Development I (Fifth Semester)   
+**This project was developed with assistance from AI tools**
 
 ---
-Feel free to open issues for roadmap items or clarifications.
+
+## Application Screenshots
+
+<p align="center">
+  <img src="project_report/images/1.jpg" width="200" alt="App Screenshot 1"/>
+  <img src="project_report/images/2.jpg" width="200" alt="App Screenshot 2"/>
+  <img src="project_report/images/3.jpg" width="200" alt="App Screenshot 3"/>
+  <img src="project_report/images/4.jpg" width="200" alt="App Screenshot 4"/>
+</p>
+
+---
+
+## About the Project
+
+CHOLO is a mobile application that enables university students to share rides and reduce commuting costs. Students can offer available seats in their vehicles or book rides from other verified students traveling along similar routes.
+
+### Problem Statement
+- University transportation is expensive for students
+- Students traveling similar routes lack coordination platforms
+- Safety concerns exist with unverified ride-sharing
+- Existing platforms don't cater specifically to university needs
+
+### Solution
+- University email verification for all users
+- Post and search rides along campus routes
+- Real-time booking and notifications
+- Student-exclusive community platform
+
+---
+
+## Core Features
+
+### Authentication System
+- University email registration and verification
+- Secure login/logout functionality
+- User profile management
+
+### Ride Management
+- Offer rides with vehicle details, route, seats, price, and timing
+- Search available rides by route
+- View driver information and ride details
+- Real-time seat availability tracking
+
+### Booking System
+- Book available seats
+- View booking history
+- Track ride status
+
+### Notifications
+- Booking confirmations
+- Ride status updates
+
+---
+
+## Technology Stack
+
+| Component | Technology |
+|-----------|-----------|
+| **Framework** | Flutter 3.x |
+| **Language** | Dart 3.x |
+| **Backend** | Firebase Authentication + Cloud Firestore |
+| **Notifications** | flutter_local_notifications |
+| **Platform Support** | Android, iOS, Web |
+
+### Dependencies
+```yaml
+flutter:
+  sdk: flutter
+firebase_core: ^2.24.2
+firebase_auth: ^4.15.3
+cloud_firestore: ^4.13.6
+provider: ^6.1.1
+flutter_local_notifications: ^16.3.0
+```
+
+---
+
+## Project Structure
+
+```
+lib/
+├── core/
+│   ├── models/
+│   ├── services/
+│   │   ├── auth_service.dart
+│   │   ├── ride_service.dart
+│   │   └── notification_service.dart
+│   └── providers/
+│       └── auth_provider.dart
+├── screens/
+│   ├── landing_screen.dart
+│   ├── login_screen.dart
+│   ├── register_screen.dart
+│   ├── home_screen.dart
+│   ├── offer_ride_screen.dart
+│   ├── search_rides_screen.dart
+│   └── profile_screen.dart
+├── widgets/
+└── main.dart
+
+test/
+```
+
+---
+
+## Setup Instructions
+
+### Prerequisites
+- Flutter SDK 3.0+
+- Dart SDK 3.0+
+- Android Studio or Xcode
+- Firebase account
+
+### Installation Steps
+
+1. Clone the repository
+```bash
+git clone https://github.com/tanmoykdas/CHOLO.git
+cd CHOLO
+```
+
+2. Install dependencies
+```bash
+flutter pub get
+```
+
+3. Firebase Configuration
+   - Create Firebase project at [Firebase Console](https://console.firebase.google.com/)
+   - Enable Email/Password authentication
+   - Create Cloud Firestore database
+   - Add Android app and download `google-services.json` to `android/app/`
+   - Add iOS app and download `GoogleService-Info.plist` to `ios/Runner/`
+
+4. Configure FlutterFire
+```bash
+dart pub global activate flutterfire_cli
+flutterfire configure
+```
+
+5. Run the application
+```bash
+flutter run
+```
+
+---
+
+## Database Schema
+
+### Users Collection
+```
+users/{userId}
+├── name: string
+├── email: string
+├── universityEmail: string
+├── emailVerified: boolean
+├── phoneNumber: string
+├── createdAt: timestamp
+└── isAdmin: boolean
+```
+
+### Rides Collection
+```
+rides/{rideId}
+├── ownerId: string
+├── ownerName: string
+├── vehicleType: string
+├── route: string
+├── startLocation: string
+├── endLocation: string
+├── totalSeats: number
+├── availableSeats: number
+├── pricePerSeat: number
+├── rideTime: timestamp
+├── status: string
+└── createdAt: timestamp
+```
+
+### Bookings Collection
+```
+bookings/{bookingId}
+├── rideId: string
+├── userId: string
+├── riderId: string
+├── seatsBooked: number
+├── totalPrice: number
+├── status: string
+└── createdAt: timestamp
+```
+
+---
+
+## Security
+
+Firestore security rules ensure:
+- Users can only modify their own profiles
+- Authenticated users can create rides
+- Only ride owners can update/delete their rides
+- Only booking owners can manage their bookings
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update, delete: if isOwner(userId);
+    }
+    
+    match /rides/{rideId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && resource.data.ownerId == request.auth.uid;
+    }
+    
+    match /bookings/{bookingId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+  }
+}
+```
+
+---
+
+## Testing
+
+Run tests:
+```bash
+flutter test
+flutter test --coverage
+```
+
+Current test files:
+- auth_provider_test.dart
+- landing_screen_test.dart
+- widget_test.dart
+
+---
+
+## Development Status
+
+### Completed
+- Application architecture
+- Authentication system
+- Ride and booking models
+- UI screens
+- Local notifications
+- Unit and widget tests
+
+### In Progress
+- Firebase real-time synchronization
+- Booking flow validation
+- Error handling improvements
+
+### Planned Features
+- Google Maps integration
+- In-app messaging
+- Rating system
+- Push notifications
+- Ride cancellation system
+- Admin panel
+- Multi-university support
+
+---
+
+## License
+
+Educational project developed for Software Development I course.  
+For academic and educational purposes only.
+
+---
+
+## Developer
+
+**Tanmoy Kumar Das**  
+Software Development I (Fifth Semester)
+
+**GitHub:** [@tanmoykdas](https://github.com/tanmoykdas)  
+**Repository:** [CHOLO](https://github.com/tanmoykdas/CHOLO)
+
+---
+
+## Acknowledgments
+
+- AI tools for development assistance
+- Firebase for backend infrastructure
+- Flutter framework
+- Course instructors and mentors
